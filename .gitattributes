@@ -1,0 +1,12 @@
+# Normalize to LF in the repository and on checkout everywhere. Without this,
+# Windows clones rewrite every file to CRLF and contributors on other platforms
+# see whole-file diffs.
+* text=auto eol=lf
+
+# Generated; keep it out of PR diffs and merge-conflict noise.
+package-lock.json -diff linguist-generated
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.tgz binary

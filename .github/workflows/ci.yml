@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # vitest 5 requires node ^22.12 || ^24 || >=26, so the unit suite cannot run
+    # on this package's own engines floor (>=20). The `package` job below covers
+    # node 20 against the built artifact instead.
+    name: test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.12', '24', '26']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  package:
+    # Pack the tarball and install it into a clean project, which is the only
+    # thing that actually verifies the `files` allowlist, the conditional
+    # exports map, and the engines floor.
+    name: packaged install (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22.12', '24', '26']
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the tarball on a supported node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '26'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm pack --pack-destination /tmp
+
+      - name: Switch to the node version under test
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install the tarball into a clean project and smoke it
+        run: |
+          set -eux
+          mkdir -p /tmp/consumer
+          cd /tmp/consumer
+          npm init -y >/dev/null
+          npm pkg set type=module
+          npm install /tmp/express-to-mcp-*.tgz \
+            express@^5.2.1 zod@^4 @modelcontextprotocol/sdk@^1.30.0
+          cp "$GITHUB_WORKSPACE/scripts/smoke.mjs" ./smoke.mjs
+          node smoke.mjs
+
+  example:
+    name: stdio example end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '26'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Drive examples/stdio.ts with a real MCP client
+        run: node scripts/check-example.mjs

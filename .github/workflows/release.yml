@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run every check and pack the tarball, but do not publish'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  # Required for npm provenance: the OIDC token is what lets npm attest that
+  # this tarball was built by this workflow from this commit.
+  id-token: write
+
+jobs:
+  publish:
+    name: publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '26'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p 'require("./package.json").version')"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag v$tag does not match package.json version $pkg"
+            exit 1
+          fi
+          echo "tag and package.json agree on $pkg"
+
+      - name: Refuse to republish an existing version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -eu
+          pkg="$(node -p 'require("./package.json").version')"
+          if npm view "express-to-mcp@$pkg" version >/dev/null 2>&1; then
+            echo "::error::express-to-mcp@$pkg is already on npm; bump the version"
+            exit 1
+          fi
+
+      # The same gate as prepublishOnly, run explicitly so a failure is
+      # attributable to a named step rather than buried in npm's output.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run smoke
+      - run: node scripts/check-example.mjs
+
+      - run: npm pack --pack-destination /tmp
+
+      - name: Show what would ship
+        run: tar -tzf /tmp/express-to-mcp-*.tgz | sort
+
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/v') && inputs.dry-run != true
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarball
+          path: /tmp/express-to-mcp-*.tgz

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Model Context Protocol docs
+    url: https://modelcontextprotocol.io
+    about: Questions about MCP itself, its clients, or transports.
+  - name: Express 5 migration guide
+    url: https://expressjs.com/en/guide/migrating-5.html
+    about: Route paths use Express 5 / path-to-regexp v8 syntax. Start here if a path is rejected at construction.

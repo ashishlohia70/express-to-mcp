@@ -1,0 +1,57 @@
+name: Bug report
+description: Something behaves differently than the README says it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Because this library runs your Express stack in memory, the most useful
+        thing you can give us is the route and the tool definition. A failing
+        snippet beats a description almost every time.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: >
+        The Express route, the `ToolRoute` you declared, and the arguments you
+        called it with. Please include the middleware mounted on the app —
+        body parsers, auth, and `compression` all interact with the mock pipeline.
+      render: ts
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `node -p "[process.version, require('express/package.json').version, require('zod/package.json').version, require('express-to-mcp/package.json').version].join(' | ')"`
+      placeholder: v22.14.0 | 5.2.1 | 4.5.4 | 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: known-limits
+    attributes:
+      label: Have you checked the known limitations?
+      description: The README lists these; they are working as intended today.
+      options:
+        - 'Yes, and mine is not one of them'
+        - "No, I haven't read them"
+        - "Mine might be one of them but I'd like it supported"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Stack traces, captured responses, or what you already tried.

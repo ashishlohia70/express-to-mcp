@@ -3,8 +3,9 @@
 # see whole-file diffs.
 * text=auto eol=lf
 
-# Generated; keep it out of PR diffs and merge-conflict noise.
-package-lock.json -diff linguist-generated
+# Collapse the lockfile in GitHub's diff view, but keep it a normal diffable
+# text file locally (`-diff` would make git report it as binary).
+package-lock.json linguist-generated=true
 
 *.png binary
 *.jpg binary

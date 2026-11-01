@@ -60,7 +60,7 @@
     "rest"
   ],
   "dependencies": {
-    "path-to-regexp": "^8.4.0",
+    "path-to-regexp": "^9.0.0",
     "zod-to-json-schema": "^3.25.2"
   },
   "peerDependencies": {
